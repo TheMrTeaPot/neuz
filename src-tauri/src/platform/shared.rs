@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use tauri::Window;
+use slog::Logger;
+use tauri::{Manager, Window};
 
 use crate::data::Point;
 
@@ -104,8 +105,30 @@ pub fn eval_mouse_move(window: &Window, pos: Point) {
     );
 }
 
+pub fn draw_rectangle (window: &Window, pos: Point){
+    std::thread::sleep(Duration::from_millis(25));
+    drop(
+        window.eval(
+            format!(
+                "
+                    const ctx = document.querySelector('canvas').getContext('2d');
+
+                    ctx.beginPath();
+                    ctx.rect( {0}, {1}, 85, 22);
+                    ctx.stroke();
+
+                    global.gc();;",
+                pos.x -40, pos.y-22
+            )
+                .as_str(),
+        ),
+    );
+}
 pub fn eval_mob_click(window: &Window, pos: Point) {
+
     eval_mouse_move(window, pos);
+    draw_rectangle(window,pos);
+
     std::thread::sleep(Duration::from_millis(25));
     drop(
         window.eval(

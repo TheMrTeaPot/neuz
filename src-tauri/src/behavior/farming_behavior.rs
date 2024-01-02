@@ -271,6 +271,7 @@ impl FarmingBehavior<'_> {
     }
 
     fn full_buffing(&mut self, config: &FarmingConfig, image: &mut ImageAnalyzer, return_state: State, last_slots_usage_vec: [[Option<Instant>; 10]; 9]) -> State {
+
         let all_buffs = config.get_all_usable_slot_for_type(SlotType::BuffSkill, last_slots_usage_vec);
         for slot_index in all_buffs {
             self.send_slot(slot_index);
@@ -342,6 +343,7 @@ impl FarmingBehavior<'_> {
         config: &FarmingConfig,
         image: &mut ImageAnalyzer,
     ) -> State {
+
         if config.is_stop_fighting() {
             return State::Attacking(Target::default());
         }
@@ -394,6 +396,13 @@ impl FarmingBehavior<'_> {
                         }
                     }
                 } {
+
+                    // image.save_image_to_file(self.logger,"D:\\");
+
+                    image.image_ocr(self.logger,*mob);
+
+                    std::thread::sleep(Duration::from_millis(100));
+
                     // Transition to next state
                     State::EnemyFound(*mob)
                 } else {
@@ -459,12 +468,11 @@ impl FarmingBehavior<'_> {
         let point = mob.get_attack_coords();
 
         self.last_click_pos = Some(point);
-
         // Set cursor position and simulate a click
         eval_mob_click(self.window, point);
 
         // Wait a few ms before transitioning state
-        // std::thread::sleep(Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(100));
         State::Attacking(mob)
     }
 

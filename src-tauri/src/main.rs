@@ -401,6 +401,20 @@ fn start_bot(profile_id: String, state: tauri::State<AppState>, app_handle: taur
             let config = &*config.read();
             let mut frontend_info_mut = *frontend_info.read();
 
+
+            // let images_path = format!(
+            //     r"{}\profile_{}\",
+            //     app_handle
+            //         .path_resolver()
+            //         .app_data_dir()
+            //         .unwrap()
+            //         .to_string_lossy(),
+            //     profile_id
+            // )
+            //     .clone();
+            //
+            // frontend_info_mut.set
+
             // Send changed config to frontend if needed
             if config.change_id() > last_config_change_id {
                 config.serialize(

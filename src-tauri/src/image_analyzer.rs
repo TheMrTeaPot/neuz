@@ -1,13 +1,22 @@
 use std::{
     sync::mpsc::{sync_channel, Receiver},
     time::Instant,
+    fs::{self},
+    io,
+    path::{Path, PathBuf},
 };
-
+use std::io::ErrorKind::Unsupported;
+use std::time::Duration;
+use image::{Rgb, Rgba};
 //use libscreenshot::shared::Area;
 use libscreenshot::{ImageBuffer, WindowCaptureProvider};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use slog::Logger;
 use tauri::Window;
+use leptess::{leptonica, tesseract};
+use image::{open, DynamicImage};
+use image::error::UnsupportedError;
+use std::io::Cursor;
 
 use crate::{
     data::{point_selector, Bounds, ClientStats, MobType, Point, PointCloud, Target, TargetType},
@@ -56,11 +65,14 @@ impl ImageAnalyzer {
         if let Some(provider) = libscreenshot::get_window_capture_provider() {
             if let Ok(image) = provider.capture_window(self.window_id) {
                 self.image = Some(image);
+
+                // self.save_image_to_file(logger, images_path);
             } else {
                 slog::warn!(logger, "Failed to capture window"; "window_id" => self.window_id);
             }
         }
     }
+
 
     pub fn pixel_detection(
         &self,
@@ -91,8 +103,8 @@ impl ImageAnalyzer {
                 #[allow(clippy::absurd_extreme_comparisons)] // not always 0 (macOS)
                 if y <= IGNORE_AREA_TOP
                     || y > image_height
-                        .checked_sub(IGNORE_AREA_BOTTOM)
-                        .unwrap_or(image_height)
+                    .checked_sub(IGNORE_AREA_BOTTOM)
+                    .unwrap_or(image_height)
                     || y > IGNORE_AREA_TOP + max_y
                     || y > max_y
                     || y < min_y
@@ -158,8 +170,8 @@ impl ImageAnalyzer {
                 if let Some(config) = config {
                     // Filter out small clusters (likely to cause misclicks)
                     mob.bounds.w > config.min_mobs_name_width()
-                    // Filter out huge clusters (likely to be Violet Magician Troupe)
-                    && mob.bounds.w < config.max_mobs_name_width()
+                        // Filter out huge clusters (likely to be Violet Magician Troupe)
+                        && mob.bounds.w < config.max_mobs_name_width()
                 } else {
                     true
                 }
@@ -308,7 +320,6 @@ impl ImageAnalyzer {
         max_distance: i32,
         _logger: &Logger,
     ) -> Option<&'a Target> {
-
         let _timer = Timer::start_new("find_closest_mob");
 
         let image = self.image.as_ref().unwrap();
@@ -350,8 +361,8 @@ impl ImageAnalyzer {
                     }
                 }
                 result // && *distance > 20
-                       // let coords = mob.name_bounds.get_lowest_center_point();
-                       // !avoid_bounds.grow_by(100).contains_point(&coords) && *distance > 200
+                // let coords = mob.name_bounds.get_lowest_center_point();
+                // !avoid_bounds.grow_by(100).contains_point(&coords) && *distance > 200
             }) {
                 Some(mob)
             } else {
@@ -365,5 +376,67 @@ impl ImageAnalyzer {
                 None
             }
         }
+    }
+
+
+    pub fn image_ocr(&mut self, logger: &Logger, target: Target) {
+
+
+
+        match ImageAnalyzer::convert_png_to_tiff(self.image.clone()) {
+            Ok(tiff_data) => {
+                let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+                lt.set_image_from_mem(tiff_data.as_ref());
+
+                lt.set_source_resolution(72);
+
+                //calculating top of the box for the mob name
+                let mut top_left_x = target.get_attack_coords().x - 40;
+                let mut top_left_y = target.get_attack_coords().y - 25;
+
+                lt.set_rectangle(top_left_x as i32, top_left_y as i32, 85, 25);
+
+                slog::debug!(logger,"Mob"; "name" =>  lt.get_utf8_text().unwrap());
+
+                // self.image.save_image_to_file(self.logger,"D:\\");
+
+                let image_name =  format!("D://capture_{}_{}.png",top_left_x,top_left_y) ;
+                slog::debug!(logger, "Image stuff"; "path" => image_name.clone());
+                std::fs::remove_file(image_name.clone()); // delete file
+                std::thread::sleep(Duration::from_millis(100));
+
+                self.image.as_ref().unwrap().save(image_name);
+
+
+
+            }
+            Err(err) => eprintln!("Error converting PNG to TIFF: {}", err),
+        }
+
+    }
+
+    fn convert_png_to_tiff(png_image: Option<ImageBuffer>) -> Result<Vec<u8>, image::ImageError> {
+
+        // Convert ImageBuffer to DynamicImage
+        let dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone());
+
+        // Create a buffer to store the TIFF image
+        let mut tiff_buffer = Vec::new();
+        let mut buff = Cursor::new(tiff_buffer);
+
+        // Save the DynamicImage as TIFF to the buffer
+        dynamic_image.write_to(&mut buff, image::ImageOutputFormat::Tiff)?;
+
+        Ok(buff.into_inner())
+    }
+
+   pub fn save_image_to_file(&mut self, logger: &Logger, images_path: &str) {
+
+        let image_name = images_path.clone().to_owned() + "capture.png";
+        slog::debug!(logger, "Image stuff"; "path" => image_name.clone());
+        std::fs::remove_file(image_name.clone()); // delete file
+        std::thread::sleep(Duration::from_millis(100));
+
+        self.image.as_ref().unwrap().save(image_name);
     }
 }
