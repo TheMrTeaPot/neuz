@@ -30,7 +30,6 @@ const SlotModal = ({className, isShowing, hide, index, slot, onChange, barIndex,
              return {value: type, label: translateDesc(type,"None")[1] }
         }
         return {}
-
     }).filter((item) => item.value != null )
         .sort((a,b) => {
             if (a.label !== undefined && b.label !== undefined) {

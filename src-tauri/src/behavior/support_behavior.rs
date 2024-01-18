@@ -78,8 +78,6 @@ impl<'a> Behavior<'a> for SupportBehavior<'a> {
                 if target_marker.is_some() {
                     self.lose_target();
                 }
-                slog::debug!(self.logger, "full self buffing");
-
                 play!(self.movement => [
                         PressKey("F1"),
                         PressKey("C"),

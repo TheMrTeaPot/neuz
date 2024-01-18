@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use std::io::ErrorKind::Unsupported;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use image::{GenericImageView, ImageFormat, Luma, Rgb, Rgba};
 //use libscreenshot::shared::Area;
 use libscreenshot::{ImageBuffer, WindowCaptureProvider};
@@ -384,6 +384,7 @@ impl ImageAnalyzer {
         //     true => ImageAnalyzer::convert_png_to_gray_tiff(logger, self.image.clone(), box_bounds),
         //     false => ImageAnalyzer::convert_png_to_tiff(logger, self.image.clone(), box_bounds),
         // };
+        let now = SystemTime::now();
 
         let tiff_data = ImageAnalyzer::convert_png_to_gray_tiff(logger, self.image.clone(), box_bounds, should_use_gray_scale);
 
@@ -393,7 +394,7 @@ impl ImageAnalyzer {
         leptess.set_source_resolution(72);
         leptess.set_rectangle(box_bounds.x as i32, box_bounds.y as i32, box_bounds.w as i32, box_bounds.h as i32);
         let recognized_text = leptess.get_utf8_text().unwrap();
-        slog::debug!(logger,"Text"; "Found" =>  recognized_text.clone());
+        // slog::debug!(logger,"Text"; "Found" =>  recognized_text.clone(), "time" => now.elapsed().unwrap().as_millis());
         recognized_text
     }
 
@@ -476,31 +477,48 @@ mod tests {
         use imageproc::drawing::draw_hollow_rect_mut;
         use imageproc::rect::Rect;
         //
-        // let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-        // lt.set_image("D://gray.png");
+        let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+        lt.set_image("D://townBlink.png");
         // // lt.set_image("D://img/RedBad.png");
-        // lt.set_source_resolution(72);
+        lt.set_source_resolution(72);
 
         // let top_left_x = 327;
         // let top_left_y = 2;
         // let w = 200;
         // let h = 30;
         //
-        let top_left_x = 739;
-        let top_left_y = 72;
-        let w = 5;
-        let h = 5;
+        // let top_left_x = 739;
+        // let top_left_y = 72;
+        // let w = 5;
+        // let h = 5;
         // lt.set_rectangle(top_left_x as i32, top_left_y as i32, w as i32, h as i32);
-
-        // lt.get
 
         // println!("I got the value {}", lt.get_utf8_text().unwrap());
         // println!("I got the value {}", lt.get_hocr_text(1).unwrap());
 
-        let img = image::open("D://partyScreen.png").unwrap();
-        let mut gray = img.to_luma8();
-        let white = Luma([255]);
-        draw_hollow_rect_mut(&mut gray, Rect::at(top_left_x, top_left_y).of_size(w, h), white);
-        gray.save("D://gray2.png").unwrap();
+        // let img = image::open("D://partyScreen.png").unwrap();
+        // let mut gray = img.to_luma8();
+        // let white = Luma([255]);
+        // draw_hollow_rect_mut(&mut gray, Rect::at(top_left_x, top_left_y).of_size(w, h), white);
+        // gray.save("D://gray2.png").unwrap();
+
+
+
+        // ------------
+        //     boxes
+        let boxes = lt.get_component_boxes(
+            leptess::capi::TessPageIteratorLevel_RIL_WORD,
+            true,
+        ).unwrap();
+
+        //Box { geometry: BoxGeometry { x: 15, y: 9, w: 9, h: 10 } }
+        for b in &boxes {
+            println!("{:?}", b);
+            lt.set_rectangle(b.get_geometry().x, b.get_geometry().y, b.get_geometry().w, b.get_geometry().h);
+            println!("I got the value {}", lt.get_utf8_text().unwrap());
+
+        }
+
     }
+
 }

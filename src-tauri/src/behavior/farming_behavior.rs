@@ -87,7 +87,7 @@ impl<'a> Behavior<'a> for FarmingBehavior<'a> {
             last_no_ennemy_time: None,
             concurrent_mobs_under_attack: 0,
             concurrent_mobs_killed: 0,
-            mob_bar_name_bounds: Bounds::new(325, 2, 200, 25),
+            mob_bar_name_bounds: Bounds::new(320, 2, 200, 25),
             mob_taken_bounds: Bounds::new(155, 407, 476, 71),
 
         }
@@ -567,14 +567,20 @@ impl FarmingBehavior<'_> {
                 let hp_last_update = image.client_stats.hp.last_update_time.unwrap();
 
                 let mob_name = image.image_ocr(self.logger, self.mob_bar_name_bounds, true);
-                let mob_taken_text = image.image_ocr(self.logger, self.mob_taken_bounds, false);
+                let announcement_text = image.image_ocr(self.logger, self.mob_taken_bounds, false);
                 // std::thread::sleep(Duration::from_millis(100));
 
-                slog::debug!(self.logger, "Found mobs"; "name" => mob_name, "taken?" => mob_taken_text);
+                slog::debug!(self.logger, "Found mobs"; "name" => mob_name, "announcement_text?" => announcement_text.clone());
 
                 // Detect if mob was attacked
                 if image.client_stats.target_hp.value < 100 && config.prevent_already_attacked() {
-                    // // If we didn't took any damages abort attack
+
+                    /// aborting the attack if we detect the announcement that says " you cannot attack a monster..."
+                    if announcement_text.clone().contains("cannot") || announcement_text.clone().contains("attack") {
+                        return self.abort_attack(image);
+                    }
+
+                    // // If we didn't take any damages abort attack
                     // reducing to 500ms the time to check the last time the mob was attacked, 5s is too long.
                     if hp_last_update.elapsed().as_millis() > 50 {
                         return self.abort_attack(image);
