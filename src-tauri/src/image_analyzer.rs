@@ -7,7 +7,7 @@ use std::{
 };
 use std::io::ErrorKind::Unsupported;
 use std::time::Duration;
-use image::{Rgb, Rgba};
+use image::{GenericImageView, ImageFormat, Luma, Rgb, Rgba};
 //use libscreenshot::shared::Area;
 use libscreenshot::{ImageBuffer, WindowCaptureProvider};
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -379,40 +379,66 @@ impl ImageAnalyzer {
     }
 
 
-    pub fn image_ocr(&mut self, logger: &Logger, target: Target) {
+    pub fn image_ocr(&mut self, logger: &Logger, box_bounds: Bounds, should_use_gray_scale: bool) -> String {
+        // let tiff_data = match should_use_gray_scale {
+        //     true => ImageAnalyzer::convert_png_to_gray_tiff(logger, self.image.clone(), box_bounds),
+        //     false => ImageAnalyzer::convert_png_to_tiff(logger, self.image.clone(), box_bounds),
+        // };
 
+        let tiff_data = ImageAnalyzer::convert_png_to_gray_tiff(logger, self.image.clone(), box_bounds, should_use_gray_scale);
 
+        let mut leptess = leptess::LepTess::new(None, "eng").unwrap();
 
-        match ImageAnalyzer::convert_png_to_tiff(self.image.clone()) {
-            Ok(tiff_data) => {
-                let mut lt = leptess::LepTess::new(None, "eng").unwrap();
-                lt.set_image_from_mem(tiff_data.as_ref());
+        leptess.set_image_from_mem(tiff_data.as_ref());
+        leptess.set_source_resolution(72);
+        leptess.set_rectangle(box_bounds.x as i32, box_bounds.y as i32, box_bounds.w as i32, box_bounds.h as i32);
+        let recognized_text = leptess.get_utf8_text().unwrap();
+        slog::debug!(logger,"Text"; "Found" =>  recognized_text.clone());
+        recognized_text
+    }
 
-                lt.set_source_resolution(72);
+    fn convert_png_to_gray_tiff(logger: &Logger, png_image: Option<ImageBuffer>, box_bounds: Bounds, should_use_gray_scale: bool) -> Vec<u8> {
 
-                //calculating top of the box for the mob name
-                let mut top_left_x = target.get_attack_coords().x - 40;
-                let mut top_left_y = target.get_attack_coords().y - 25;
+        // Convert ImageBuffer to DynamicImage
+        // let mut dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone()).to_luma8();
 
-                lt.set_rectangle(top_left_x as i32, top_left_y as i32, 85, 25);
+        // let mut dynamic_image = match should_use_gray_scale {
+        //     true => DynamicImage::ImageRgba8(png_image.unwrap().clone()).to_luma8(),
+        //     false => DynamicImage::ImageRgba8(png_image.unwrap().clone()),
+        // };
 
-                slog::debug!(logger,"Mob"; "name" =>  lt.get_utf8_text().unwrap());
-
-                // self.image.save_image_to_file(self.logger,"D:\\");
-
-                let image_name =  format!("D://capture_{}_{}.png",top_left_x,top_left_y) ;
-                slog::debug!(logger, "Image stuff"; "path" => image_name.clone());
-                std::fs::remove_file(image_name.clone()); // delete file
-                std::thread::sleep(Duration::from_millis(100));
-
-                self.image.as_ref().unwrap().save(image_name);
-
-
-
-            }
-            Err(err) => eprintln!("Error converting PNG to TIFF: {}", err),
+       let mut dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone());
+        if should_use_gray_scale {
+            dynamic_image = DynamicImage::from(dynamic_image.to_luma8());
         }
 
+
+
+        ///This piece of code is for debugging purposes
+        /// It will draw a whitebox around the area attempted to be recognized
+        ///
+
+        //
+        // // Rgba([255, 0, 0, 255])
+        // // let white = Luma([255]);
+        // use imageproc::drawing::draw_hollow_rect_mut;
+        // use imageproc::rect::Rect;
+        // draw_hollow_rect_mut(&mut dynamic_image, Rect::at(box_bounds.x as i32, box_bounds.y as i32).of_size(box_bounds.w, box_bounds.h),  Rgba([255, 0, 0, 255]) );
+        // let image_name = format!("D://screen_cap_{}_{}.png", box_bounds.x, box_bounds.y);
+        // dynamic_image.save(image_name).unwrap();
+        ///
+
+
+        /// Create a buffer to store the TIFF image
+        // let mut tiff_buffer = Vec::new();
+        let mut buff = Cursor::new(Vec::new());
+
+
+        // Save the DynamicImage as TIFF to the buffer
+        dynamic_image.write_to(&mut buff, image::ImageOutputFormat::Tiff);
+
+        // Ok(buff.into_inner())
+        buff.into_inner()
     }
 
     fn convert_png_to_tiff(png_image: Option<ImageBuffer>) -> Result<Vec<u8>, image::ImageError> {
@@ -430,13 +456,51 @@ impl ImageAnalyzer {
         Ok(buff.into_inner())
     }
 
-   pub fn save_image_to_file(&mut self, logger: &Logger, images_path: &str) {
-
+    pub fn save_image_to_file(&mut self, logger: &Logger, images_path: &str) {
         let image_name = images_path.clone().to_owned() + "capture.png";
         slog::debug!(logger, "Image stuff"; "path" => image_name.clone());
         std::fs::remove_file(image_name.clone()); // delete file
         std::thread::sleep(Duration::from_millis(100));
 
         self.image.as_ref().unwrap().save(image_name);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn img_test() {
+        use image::Luma;
+        use imageproc::drawing::draw_hollow_rect_mut;
+        use imageproc::rect::Rect;
+        //
+        // let mut lt = leptess::LepTess::new(None, "eng").unwrap();
+        // lt.set_image("D://gray.png");
+        // // lt.set_image("D://img/RedBad.png");
+        // lt.set_source_resolution(72);
+
+        // let top_left_x = 327;
+        // let top_left_y = 2;
+        // let w = 200;
+        // let h = 30;
+        //
+        let top_left_x = 739;
+        let top_left_y = 72;
+        let w = 5;
+        let h = 5;
+        // lt.set_rectangle(top_left_x as i32, top_left_y as i32, w as i32, h as i32);
+
+        // lt.get
+
+        // println!("I got the value {}", lt.get_utf8_text().unwrap());
+        // println!("I got the value {}", lt.get_hocr_text(1).unwrap());
+
+        let img = image::open("D://partyScreen.png").unwrap();
+        let mut gray = img.to_luma8();
+        let white = Luma([255]);
+        draw_hollow_rect_mut(&mut gray, Rect::at(top_left_x, top_left_y).of_size(w, h), white);
+        gray.save("D://gray2.png").unwrap();
     }
 }
