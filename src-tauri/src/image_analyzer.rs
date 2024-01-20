@@ -399,21 +399,11 @@ impl ImageAnalyzer {
     }
 
     fn convert_png_to_gray_tiff(logger: &Logger, png_image: Option<ImageBuffer>, box_bounds: Bounds, should_use_gray_scale: bool) -> Vec<u8> {
-
         // Convert ImageBuffer to DynamicImage
-        // let mut dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone()).to_luma8();
-
-        // let mut dynamic_image = match should_use_gray_scale {
-        //     true => DynamicImage::ImageRgba8(png_image.unwrap().clone()).to_luma8(),
-        //     false => DynamicImage::ImageRgba8(png_image.unwrap().clone()),
-        // };
-
        let mut dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone());
         if should_use_gray_scale {
             dynamic_image = DynamicImage::from(dynamic_image.to_luma8());
         }
-
-
 
         ///This piece of code is for debugging purposes
         /// It will draw a whitebox around the area attempted to be recognized
@@ -431,14 +421,11 @@ impl ImageAnalyzer {
 
 
         /// Create a buffer to store the TIFF image
-        // let mut tiff_buffer = Vec::new();
         let mut buff = Cursor::new(Vec::new());
-
 
         // Save the DynamicImage as TIFF to the buffer
         dynamic_image.write_to(&mut buff, image::ImageOutputFormat::Tiff);
 
-        // Ok(buff.into_inner())
         buff.into_inner()
     }
 

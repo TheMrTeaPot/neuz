@@ -349,7 +349,6 @@ impl FarmingBehavior<'_> {
         config: &FarmingConfig,
         image: &mut ImageAnalyzer,
     ) -> State {
-
         if config.is_stop_fighting() {
             return State::Attacking(Target::default());
         }
@@ -367,17 +366,9 @@ impl FarmingBehavior<'_> {
 
             let mob_list = self.get_list_of_mobs(config, image, mobs);
 
-
             // inverted conditionals to make it easier to read
             // Check again if we have a list of mobs
             if mob_list.is_empty() {
-                // //we didnt find a valid mob within distance and since it's aoe we need to reset our counters
-                // if config.max_aoe_farming() > 1 {
-                //     if self.concurrent_mobs_killed >= self.concurrent_mobs_under_attack {
-                //         self.concurrent_mobs_killed = 0;
-                //         self.concurrent_mobs_under_attack = 0;
-                //     }
-                // }
                 // Transition to next state
                 State::NoEnemyFound
             } else {
@@ -400,12 +391,7 @@ impl FarmingBehavior<'_> {
                         }
                     }
                 } {
-
-                    // image.save_image_to_file(self.logger,"D:\\");
-
-
                     std::thread::sleep(Duration::from_millis(100));
-
                     // Transition to next state
                     State::EnemyFound(*mob)
                 } else {
@@ -574,7 +560,6 @@ impl FarmingBehavior<'_> {
 
                 // Detect if mob was attacked
                 if image.client_stats.target_hp.value < 100 && config.prevent_already_attacked() {
-
                     /// aborting the attack if we detect the announcement that says " you cannot attack a monster..."
                     if announcement_text.clone().contains("cannot") || announcement_text.clone().contains("attack") {
                         return self.abort_attack(image);

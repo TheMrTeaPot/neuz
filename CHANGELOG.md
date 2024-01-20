@@ -6,6 +6,9 @@ Date format: `DD/MM/YYYY`
 [@slyker]: https://github.com/slyker
 <!-- /maintainers -->
 
+**0.16.5**
+> Released on 1.19.2024
+> -wip
 **0.16.4**
 > Released on 1.19.2024
 - Added multi buffs
