@@ -54,7 +54,7 @@ pub struct FarmingBehavior<'a> {
     concurrent_mobs_under_attack: u32,
     concurrent_mobs_killed: u32,
     mob_bar_name_bounds: Bounds,
-    mob_taken_bounds: Bounds,
+    announcement_section_bounds: Bounds,
 
 }
 
@@ -88,7 +88,8 @@ impl<'a> Behavior<'a> for FarmingBehavior<'a> {
             concurrent_mobs_under_attack: 0,
             concurrent_mobs_killed: 0,
             mob_bar_name_bounds: Bounds::new(320, 2, 200, 25),
-            mob_taken_bounds: Bounds::new(155, 407, 476, 71),
+            announcement_section_bounds: Bounds::new(155, 407, 476, 127),
+            // mob_taken_bounds: Bounds::new(155, 500, 476, 71),
 
         }
     }
@@ -115,7 +116,7 @@ impl<'a> Behavior<'a> for FarmingBehavior<'a> {
             State::NoEnemyFound => self.on_no_enemy_found(config),
             State::SearchingForEnemy => self.on_searching_for_enemy(config, image),
             State::EnemyFound(mob) => self.on_enemy_found(mob, image),
-            State::Attacking(mob) => self.on_attacking(config, mob, image),
+            State::Attacking(mob) => self.on_attacking(config, mob, image, frontend_info),
             State::AfterEnemyKill(_) => self.after_enemy_kill(frontend_info, config),
         };
 
@@ -526,6 +527,7 @@ impl FarmingBehavior<'_> {
         config: &FarmingConfig,
         mob: Target,
         image: &mut ImageAnalyzer,
+        frontend_info: &mut FrontendInfo,
     ) -> State {
         //Adding restoration checks in case health is low
         self.check_restorations(config, image);
@@ -553,15 +555,14 @@ impl FarmingBehavior<'_> {
                 let hp_last_update = image.client_stats.hp.last_update_time.unwrap();
 
                 let mob_name = image.image_ocr(self.logger, self.mob_bar_name_bounds, true);
-                let announcement_text = image.image_ocr(self.logger, self.mob_taken_bounds, false);
+                let announcement_text = image.image_ocr(self.logger, self.announcement_section_bounds, false);
                 // std::thread::sleep(Duration::from_millis(100));
-
-                slog::debug!(self.logger, "Found mobs"; "name" => mob_name, "announcement_text?" => announcement_text.clone());
-
+                // slog::debug!(self.logger, "Found mobs"; "name" => mob_name, "announcement_text?" => announcement_text.clone());
                 // Detect if mob was attacked
-                if image.client_stats.target_hp.value < 100 && config.prevent_already_attacked() {
+                if config.prevent_already_attacked() {
                     /// aborting the attack if we detect the announcement that says " you cannot attack a monster..."
                     if announcement_text.clone().contains("cannot") || announcement_text.clone().contains("attack") {
+                        slog::debug!(self.logger, "Mob taken, aborting attack");
                         return self.abort_attack(image);
                     }
 

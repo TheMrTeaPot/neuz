@@ -155,7 +155,7 @@ pub fn eval_mob_click(window: &Window, pos: Point) {
 
 pub fn eval_simple_click(window: &Window, pos: Point) {
     eval_mouse_move(window, pos);
-    std::thread::sleep(Duration::from_millis(1000));
+    std::thread::sleep(Duration::from_millis(500));
     drop(
         window.eval(
             format!(

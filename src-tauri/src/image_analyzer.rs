@@ -412,12 +412,13 @@ impl ImageAnalyzer {
         //
         // // Rgba([255, 0, 0, 255])
         // // let white = Luma([255]);
+
         // use imageproc::drawing::draw_hollow_rect_mut;
         // use imageproc::rect::Rect;
         // draw_hollow_rect_mut(&mut dynamic_image, Rect::at(box_bounds.x as i32, box_bounds.y as i32).of_size(box_bounds.w, box_bounds.h),  Rgba([255, 0, 0, 255]) );
         // let image_name = format!("D://screen_cap_{}_{}.png", box_bounds.x, box_bounds.y);
         // dynamic_image.save(image_name).unwrap();
-        ///
+        //
 
 
         /// Create a buffer to store the TIFF image
@@ -435,8 +436,7 @@ impl ImageAnalyzer {
         let dynamic_image = DynamicImage::ImageRgba8(png_image.unwrap().clone());
 
         // Create a buffer to store the TIFF image
-        let mut tiff_buffer = Vec::new();
-        let mut buff = Cursor::new(tiff_buffer);
+        let mut buff = Cursor::new(Vec::new());
 
         // Save the DynamicImage as TIFF to the buffer
         dynamic_image.write_to(&mut buff, image::ImageOutputFormat::Tiff)?;

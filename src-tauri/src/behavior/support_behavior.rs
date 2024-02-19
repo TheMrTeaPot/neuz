@@ -164,9 +164,9 @@ impl SupportBehavior<'_> {
                 // Open party menu
                 PressKey("P"),
             ]);
-        std::thread::sleep(Duration::from_millis(1000));
+        // std::thread::sleep(Duration::from_millis(500));
 
-        let point = Point::new(739, 69); //moving to the "position of the party window
+        let point = Point::new(739, 65); //moving to the "position of the party window
         eval_simple_click(self.window, point);
 
         // std::thread::sleep(Duration::from_millis(500));
