@@ -8,6 +8,7 @@ use std::{
 use std::io::ErrorKind::Unsupported;
 use std::time::{Duration, SystemTime};
 use image::{GenericImageView, ImageFormat, Luma, Rgb, Rgba};
+
 //use libscreenshot::shared::Area;
 use libscreenshot::{ImageBuffer, WindowCaptureProvider};
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -83,6 +84,7 @@ impl ImageAnalyzer {
         mut max_y: u32,
         tolerence: Option<u8>,
     ) -> Receiver<Point> {
+        // let (snd, recv) = sync_channel::<Point>(480000);
         let (snd, recv) = sync_channel::<Point>(4096);
         let image = self.image.as_ref().unwrap();
 
@@ -124,7 +126,12 @@ impl ImageAnalyzer {
                         // Check if the pixel matches any of the reference colors
                         if Self::pixel_matches(&px.0, &ref_color.refs, tolerence.unwrap_or(5)) {
                             #[allow(dropping_copy_types)]
-                            drop(snd.send(Point::new(x, y)));
+                            drop(snd.try_send(Point::new(x, y)));
+                            // drop(snd.send(Point::new(x, y)));
+
+                            // drop(snd.try_send(Point::new(x, y)).map_err(|err| {
+                            //     eprintln!("Error sending data: {}", err);
+                            // }));
 
                             // Continue to next column
                             continue 'outer;
@@ -274,19 +281,38 @@ impl ImageAnalyzer {
         // Reference color
         let ref_color: Color = {
             if !blank_target {
-                Color::new(246, 90, 106)
+                Color::new(246, 90, 106) //F65A6A
             } else {
-                Color::new(164, 180, 226)
+                Color::new(164, 180, 226) //A4B4E1
             }
         };
 
         // Collect pixel clouds
         let recv = self.pixel_detection(vec![ref_color], 0, 0, 0, 0, None);
 
+        // // Receive points from channel
+        // while let Ok(point) = recv.recv() {
+        //     coords.push(point);
+        // }
+
+
         // Receive points from channel
-        while let Ok(point) = recv.recv() {
-            coords.push(point);
+        loop {
+            match recv.recv() {
+                Ok(point) => {
+                    coords.push(point);
+                }
+                Err(std::sync::mpsc::RecvError) => {
+                    // Channel is closed, break the loop
+                    break;
+                }
+                Err(err) => {
+                    eprintln!("Error receiving data: {}", err);
+                    // Handle other errors if needed
+                }
+            }
         }
+
 
         // Identify target marker entities
         let target_markers =

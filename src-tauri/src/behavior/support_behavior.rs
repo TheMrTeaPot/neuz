@@ -109,7 +109,11 @@ impl<'a> Behavior<'a> for SupportBehavior<'a> {
         }
 
         // buffing target
-        self.get_slot_for(config, None, SlotType::BuffSkill, true);
+        let slot_sent = self.get_slot_for(config, None, SlotType::BuffSkill, true);
+        if slot_sent.is_some() {
+            //buff myself on available buffs
+            std::thread::sleep(Duration::from_millis(1000));
+        }
 
         if self.last_buff_usage.elapsed().as_millis() > config.interval_between_buffs() {
             if config.is_in_party() {
@@ -173,9 +177,10 @@ impl SupportBehavior<'_> {
 
         play!(self.movement => [
                 PressKey("Z"),
-                Wait(dur::Fixed(100)),
+                Wait(dur::Fixed(500)),
                 PressKey("P"),
             ]);
+        std::thread::sleep(Duration::from_millis(500));
     }
 
     fn move_circle_pattern(&mut self) {
@@ -305,7 +310,7 @@ impl SupportBehavior<'_> {
         if image.client_stats.hp.value > 0 {
             // Use a HealSkill if configured when health is under 85
 
-            if image.client_stats.hp.value < 20 {
+            if image.client_stats.hp.value < 40 {
                 // Take a pill if health is less than 40, ideally should not be often
                 self.get_slot_for(config, health_stat, SlotType::Pill, true);
             }

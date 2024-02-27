@@ -532,10 +532,11 @@ impl FarmingBehavior<'_> {
         //Adding restoration checks in case health is low
         self.check_restorations(config, image);
 
-        self.get_slot_for(config, None, SlotType::BuffSkill, true);
-        //buff myself on available buffs
-        std::thread::sleep(Duration::from_millis(1000));
-
+        let slot_sent = self.get_slot_for(config, None, SlotType::BuffSkill, true);
+        if slot_sent.is_some() {
+            //buff myself on available buffs
+            std::thread::sleep(Duration::from_millis(1000));
+        }
 
         let is_npc =
             image.client_stats.target_hp.value == 100 && image.client_stats.target_mp.value == 0;
