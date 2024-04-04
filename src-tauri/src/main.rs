@@ -401,20 +401,6 @@ fn start_bot(profile_id: String, state: tauri::State<AppState>, app_handle: taur
             let config = &*config.read();
             let mut frontend_info_mut = *frontend_info.read();
 
-
-            // let images_path = format!(
-            //     r"{}\profile_{}\",
-            //     app_handle
-            //         .path_resolver()
-            //         .app_data_dir()
-            //         .unwrap()
-            //         .to_string_lossy(),
-            //     profile_id
-            // )
-            //     .clone();
-            //
-            // frontend_info_mut.set
-
             // Send changed config to frontend if needed
             if config.change_id() > last_config_change_id {
                 config.serialize(
@@ -516,13 +502,12 @@ fn start_bot(profile_id: String, state: tauri::State<AppState>, app_handle: taur
                 if is_alive {
                     if !frontend_info_mut.is_alive() {
                         frontend_info_mut.set_is_alive(true);
-                        let should_disconnect = should_disconnect_on_death(config);
+                        let _should_disconnect = should_disconnect_on_death(config);
                         // if !should_disconnect {
                         //     eval_send_key(&window, "Escape", KeyMode::Press);
                         // }
                     }
-                }
-                else{
+                } else {
                     if frontend_info_mut.is_alive() {
                         let should_disconnect = should_disconnect_on_death(config);
                         if should_disconnect {
@@ -540,7 +525,6 @@ fn start_bot(profile_id: String, state: tauri::State<AppState>, app_handle: taur
                     }
                     continue;
                 }
-
 
                 match mode {
                     BotMode::Farming => {
