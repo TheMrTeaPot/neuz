@@ -9,7 +9,6 @@ use std::io::ErrorKind::Unsupported;
 use std::time::{Duration, SystemTime};
 use image::{GenericImageView, ImageFormat, Luma, Rgb, Rgba};
 
-//use libscreenshot::shared::Area;
 use libscreenshot::{ImageBuffer, WindowCaptureProvider};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use slog::Logger;
@@ -84,7 +83,6 @@ impl ImageAnalyzer {
         mut max_y: u32,
         tolerence: Option<u8>,
     ) -> Receiver<Point> {
-        // let (snd, recv) = sync_channel::<Point>(480000);
         let (snd, recv) = sync_channel::<Point>(4096);
         let image = self.image.as_ref().unwrap();
 
@@ -126,12 +124,9 @@ impl ImageAnalyzer {
                         // Check if the pixel matches any of the reference colors
                         if Self::pixel_matches(&px.0, &ref_color.refs, tolerence.unwrap_or(5)) {
                             #[allow(dropping_copy_types)]
-                            drop(snd.try_send(Point::new(x, y)));
-                            // drop(snd.send(Point::new(x, y)));
-
-                            // drop(snd.try_send(Point::new(x, y)).map_err(|err| {
-                            //     eprintln!("Error sending data: {}", err);
-                            // }));
+                            drop(snd.try_send(Point::new(x, y)).map_err(|err| {
+                                eprintln!("Error sending data: {}", err);
+                            }));
 
                             // Continue to next column
                             continue 'outer;
