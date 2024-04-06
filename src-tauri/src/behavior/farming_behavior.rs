@@ -52,6 +52,7 @@ pub struct FarmingBehavior<'a> {
     last_no_ennemy_time: Option<Instant>,
     concurrent_mobs_under_attack: u32,
     mob_bar_name_bounds: Bounds,
+    mob_level_bounds: Bounds,
     announcement_section_bounds: Bounds
 }
 
@@ -84,6 +85,7 @@ impl<'a> Behavior<'a> for FarmingBehavior<'a> {
             last_no_ennemy_time: None,
             concurrent_mobs_under_attack: 0,
             mob_bar_name_bounds: Bounds::new(320, 2, 200, 25),
+            mob_level_bounds: Bounds::new(265, 2, 60, 72),
             announcement_section_bounds: Bounds::new(155, 407, 476, 127),
         }
     }
@@ -552,19 +554,9 @@ impl FarmingBehavior<'_> {
                 self.rotation_movement_tries = 0;
                 let hp_last_update = image.client_stats.hp.last_update_time.unwrap();
 
-                let mob_name = image.image_ocr(self.logger, self.mob_bar_name_bounds, true);
-                let announcement_text = image.image_ocr(self.logger, self.announcement_section_bounds, false);
-                // std::thread::sleep(Duration::from_millis(100));
-                // slog::debug!(self.logger, "Found mobs"; "name" => mob_name, "announcement_text?" => announcement_text.clone());
                 // Detect if mob was attacked
-                if config.prevent_already_attacked() {
-                    /// aborting the attack if we detect the announcement that says " you cannot attack a monster..."
-                    if announcement_text.clone().contains("cannot") || announcement_text.clone().contains("attack") {
-                        slog::debug!(self.logger, "Mob taken, aborting attack");
-                        return self.abort_attack(image);
-                    }
-
-                    // // If we didn't take any damages abort attack
+                if image.client_stats.target_hp.value < 100 && config.prevent_already_attacked() {
+                    // // If we didn't took any damages abort attack
                     // reducing to 500ms the time to check the last time the mob was attacked, 5s is too long.
                     if hp_last_update.elapsed().as_millis() > 50 {
                         return self.abort_attack(image);
@@ -611,6 +603,11 @@ impl FarmingBehavior<'_> {
                     return State::SearchingForEnemy;
                 }
             }
+
+            // let mob_name = image.image_ocr(self.logger, self.mob_bar_name_bounds, true);
+            let mob_level = image.image_ocr(self.logger, self.mob_level_bounds, true);
+            slog::debug!(self.logger, "Mob level";"Level" => mob_level.clone());
+
 
             self.get_slot_for(config, None, SlotType::AttackSkill, true);
             std::thread::sleep(Duration::from_millis(200));
